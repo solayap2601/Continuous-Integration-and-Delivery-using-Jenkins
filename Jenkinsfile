@@ -1,9 +1,8 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:7.8.0'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
+    agent any
+    
+    tools {
+        nodejs 'node'
     }
     
     stages {
@@ -14,6 +13,12 @@ pipeline {
         }
         
         stage('Build') {
+            agent {
+                docker {
+                    image 'node:7.8.0'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock'
+                }
+            }
             steps {
                 sh 'chmod +x scripts/build.sh && ./scripts/build.sh'
             }
