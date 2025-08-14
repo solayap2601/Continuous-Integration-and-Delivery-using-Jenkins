@@ -1,6 +1,9 @@
 pipeline {
     agent any
-    
+    environment {
+        REGISTRY_URL = 'https://registry-1.docker.io/v2/'
+        CREDS_ID = 'docker-hub-credentials'
+    }
     tools {
         nodejs 'node'
     }
