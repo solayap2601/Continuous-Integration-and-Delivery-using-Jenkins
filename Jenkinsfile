@@ -22,29 +22,35 @@ pipeline {
             steps {
                 script {
                     if (env.BRANCH_NAME == 'main') {
-                        sh 'docker build -t nodemain:v1.0 .'
+                        sh 'docker build -t solayap26/nodemain:v1.0 .'
                     } else if (env.BRANCH_NAME == 'dev') {
-                        sh 'docker build -t nodedev:v1.0 .'
+                        sh 'docker build -t solayap26/nodedev:v1.0 .'
                     }
                 }
             }
         }
         
-        stage('Deploy') {
+        stage('Push to Registry') {
+            steps {
+                script {
+                    docker.withRegistry('https://registry-1.docker.io/v2/', 'docker-hub-credentials') {
+                        if (env.BRANCH_NAME == 'main') {
+                            sh 'docker push solayap26/nodemain:v1.0'
+                        } else if (env.BRANCH_NAME == 'dev') {
+                            sh 'docker push solayap26/nodedev:v1.0'
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Trigger Deploy') {
             steps {
                 script {
                     if (env.BRANCH_NAME == 'main') {
-                        sh '''
-                            docker stop $(docker ps -q --filter "ancestor=nodemain:v1.0" --filter "publish=3000") || true
-                            docker rm $(docker ps -aq --filter "ancestor=nodemain:v1.0" --filter "publish=3000") || true
-                            docker run -d --name main-app --expose 3000 -p 3000:3000 nodemain:v1.0
-                        '''
+                        build job: 'Deploy_to_main', wait: false
                     } else if (env.BRANCH_NAME == 'dev') {
-                        sh '''
-                            docker stop $(docker ps -q --filter "ancestor=nodedev:v1.0" --filter "publish=3001") || true
-                            docker rm $(docker ps -aq --filter "ancestor=nodedev:v1.0" --filter "publish=3001") || true
-                            docker run -d --name dev-app --expose 3001 -p 3001:3000 nodedev:v1.0
-                        '''
+                        build job: 'Deploy_to_dev', wait: false
                     }
                 }
             }
