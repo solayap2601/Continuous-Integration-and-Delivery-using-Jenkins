@@ -1,11 +1,18 @@
 pipeline {
-    agent any
-    
-    tools {
-        nodejs 'node'
+    agent {
+        docker {
+            image 'node:7.8.0'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
     }
     
     stages {
+        stage('Dockerfile Lint') {
+            steps {
+                sh 'docker run --rm -i hadolint/hadolint < Dockerfile'
+            }
+        }
+        
         stage('Build') {
             steps {
                 sh 'chmod +x scripts/build.sh && ./scripts/build.sh'
@@ -25,6 +32,20 @@ pipeline {
                         sh 'docker build -t solayap26/nodemain:v1.0 .'
                     } else if (env.BRANCH_NAME == 'dev') {
                         sh 'docker build -t solayap26/nodedev:v1.0 .'
+                    }
+                }
+            }
+        }
+        
+        stage('Scan Docker Image for Vulnerabilities') {
+            steps {
+                script {
+                    if (env.BRANCH_NAME == 'main') {
+                        def vulnerabilities = sh(script: "trivy image --exit-code 0 --severity HIGH,MEDIUM,LOW --no-progress solayap26/nodemain:v1.0", returnStdout: true).trim()
+                        echo "Vulnerability Report:\n${vulnerabilities}"
+                    } else if (env.BRANCH_NAME == 'dev') {
+                        def vulnerabilities = sh(script: "trivy image --exit-code 0 --severity HIGH,MEDIUM,LOW --no-progress solayap26/nodedev:v1.0", returnStdout: true).trim()
+                        echo "Vulnerability Report:\n${vulnerabilities}"
                     }
                 }
             }
