@@ -35,15 +35,15 @@ pipeline {
                 script {
                     if (env.BRANCH_NAME == 'main') {
                         sh '''
-                            docker stop $(docker ps -q --filter "ancestor=nodemain:v1.0") || true
-                            docker rm $(docker ps -aq --filter "ancestor=nodemain:v1.0") || true
-                            docker run -d --expose 3000 -p 3000:3000 nodemain:v1.0
+                            docker stop $(docker ps -q --filter "ancestor=nodemain:v1.0" --filter "publish=3000") || true
+                            docker rm $(docker ps -aq --filter "ancestor=nodemain:v1.0" --filter "publish=3000") || true
+                            docker run -d --name main-app --expose 3000 -p 3000:3000 nodemain:v1.0
                         '''
                     } else if (env.BRANCH_NAME == 'dev') {
                         sh '''
-                            docker stop $(docker ps -q --filter "ancestor=nodedev:v1.0") || true
-                            docker rm $(docker ps -aq --filter "ancestor=nodedev:v1.0") || true
-                            docker run -d --expose 3001 -p 3001:3000 nodedev:v1.0
+                            docker stop $(docker ps -q --filter "ancestor=nodedev:v1.0" --filter "publish=3001") || true
+                            docker rm $(docker ps -aq --filter "ancestor=nodedev:v1.0" --filter "publish=3001") || true
+                            docker run -d --name dev-app --expose 3001 -p 3001:3000 nodedev:v1.0
                         '''
                     }
                 }
