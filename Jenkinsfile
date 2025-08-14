@@ -1,8 +1,7 @@
 pipeline {
     agent any
     environment {
-        REGISTRY_URL = 'https://registry-1.docker.io/v2/'
-        CREDS_ID = 'docker-hub-credentials'
+        DOCKERHUB_CREDENTIALS = credentials('docker-hub-credentials')
     }
     tools {
         nodejs 'node'
@@ -35,6 +34,7 @@ pipeline {
         
         stage('Docker Build') {
             steps {
+
                 script {
                     if (env.BRANCH_NAME == 'main') {
                         sh 'docker build -t solayap26/nodemain:v1.0 .'
@@ -64,8 +64,10 @@ pipeline {
                 script {
                     docker.withRegistry('https://registry-1.docker.io/v2/', 'docker-hub-credentials') {
                         if (env.BRANCH_NAME == 'main') {
+                            sh 'docker login -u $DOCKERHUB_CREDENTIALS_USR -p $DOCKERHUB_CREDENTIALS_PSW'
                             sh 'docker push solayap26/nodemain:v1.0'
                         } else if (env.BRANCH_NAME == 'dev') {
+                            sh 'docker login -u $DOCKERHUB_CREDENTIALS_USR -p $DOCKERHUB_CREDENTIALS_PSW'
                             sh 'docker push solayap26/nodedev:v1.0'
                         }
                     }
