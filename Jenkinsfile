@@ -1,9 +1,10 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:7.8.0'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
+    agent any
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('docker-hub-credentials')
+    }
+    tools {
+        nodejs 'node'
     }
     
     stages {
@@ -14,6 +15,12 @@ pipeline {
         }
         
         stage('Build') {
+            agent {
+                docker {
+                    image 'node:7.8.0'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock -u root'
+                }
+            }
             steps {
                 sh 'chmod +x scripts/build.sh && ./scripts/build.sh'
             }
@@ -27,6 +34,7 @@ pipeline {
         
         stage('Docker Build') {
             steps {
+
                 script {
                     if (env.BRANCH_NAME == 'main') {
                         sh 'docker build -t solayap26/nodemain:v1.0 .'
@@ -41,10 +49,10 @@ pipeline {
             steps {
                 script {
                     if (env.BRANCH_NAME == 'main') {
-                        def vulnerabilities = sh(script: "trivy image --exit-code 0 --severity HIGH,MEDIUM,LOW --no-progress solayap26/nodemain:v1.0", returnStdout: true).trim()
+                        def vulnerabilities = sh(script: "docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --exit-code 0 --severity HIGH,MEDIUM,LOW --no-progress solayap26/nodemain:v1.0", returnStdout: true).trim()
                         echo "Vulnerability Report:\n${vulnerabilities}"
                     } else if (env.BRANCH_NAME == 'dev') {
-                        def vulnerabilities = sh(script: "trivy image --exit-code 0 --severity HIGH,MEDIUM,LOW --no-progress solayap26/nodedev:v1.0", returnStdout: true).trim()
+                        def vulnerabilities = sh(script: "docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --exit-code 0 --severity HIGH,MEDIUM,LOW --no-progress solayap26/nodedev:v1.0", returnStdout: true).trim()
                         echo "Vulnerability Report:\n${vulnerabilities}"
                     }
                 }
@@ -56,8 +64,10 @@ pipeline {
                 script {
                     docker.withRegistry('https://registry-1.docker.io/v2/', 'docker-hub-credentials') {
                         if (env.BRANCH_NAME == 'main') {
+                            sh 'docker login -u $DOCKERHUB_CREDENTIALS_USR -p $DOCKERHUB_CREDENTIALS_PSW'
                             sh 'docker push solayap26/nodemain:v1.0'
                         } else if (env.BRANCH_NAME == 'dev') {
+                            sh 'docker login -u $DOCKERHUB_CREDENTIALS_USR -p $DOCKERHUB_CREDENTIALS_PSW'
                             sh 'docker push solayap26/nodedev:v1.0'
                         }
                     }
